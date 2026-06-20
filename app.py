@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 import joblib
 import plotly.express as px
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
+import plotly.figure_factory as ff
 
 # =====================================================
 # LOAD MODEL & ENCODER
@@ -246,6 +249,36 @@ serta mendukung pengambilan keputusan bisnis.
         <p>Silhouette Score</p>
     </div>
     """, unsafe_allow_html=True)
+
+    st.divider()
+
+    st.subheader("📋 Statistik Utama Dataset")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric(
+        "Rata-rata Usia",
+        round(df["Age"].mean(), 1)
+    )
+
+    with col2:
+        st.metric(
+        "Rata-rata Rating",
+        round(df["Average_Rating"].mean(), 2)
+    )
+
+    with col3:
+     st.metric(
+        "Rata-rata Total Spend",
+        f"${round(df['Total_Spend'].mean(), 2)}"
+    )
+
+    with col4:
+        st.metric(
+        "Rata-rata Item",
+        round(df["Items_Purchased"].mean(), 1)
+    )
 
     st.divider()
 
@@ -663,6 +696,48 @@ elif menu == "📈 Cluster Analysis":
 )
 
     st.divider()
+
+    X = df[
+    [
+        'Age',
+        'Gender',
+        'Membership_Type',
+        'City',
+        'Average_Rating'
+    ]
+]
+
+    y = df['Customer_Segment']
+
+    X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
+
+    y_pred = model.predict(X_test)
+
+    cm = confusion_matrix(y_test, y_pred)
+    st.subheader("📊 Actual vs Predicted")
+
+    fig_cm = ff.create_annotated_heatmap(
+    z=cm,
+    x=list(model.classes_),
+    y=list(model.classes_),
+    colorscale='Pinkyl'
+)
+
+    fig_cm.update_layout(
+    title="Confusion Matrix Random Forest",
+    xaxis_title="Predicted",
+    yaxis_title="Actual"
+)
+
+    st.plotly_chart(
+    fig_cm,
+    use_container_width=True
+)
     # Ringkasan Cluster
 
     st.subheader("Ringkasan Cluster")
@@ -969,6 +1044,52 @@ elif menu == "ℹ️ Tentang Model":
 
     st.divider()
 
+    st.subheader("🌲Fitur yanng Berpengaruh")
+
+    importance_df = pd.DataFrame({
+    "Feature": [
+        "Age",
+        "Gender",
+        "Membership_Type",
+        "City",
+        "Average_Rating"
+    ],
+    "Importance": model.feature_importances_
+})
+
+    importance_df = (
+    importance_df
+    .sort_values(
+        by="Importance",
+        ascending=False
+    )
+)
+
+    fig_importance = px.bar(
+    importance_df,
+    x="Importance",
+    y="Feature",
+    orientation="h",
+    color="Importance",
+    color_continuous_scale="RdPu"
+)
+
+    fig_importance.update_layout(
+    title="Pengaruh Variabel terhadap Prediksi Segmen Pelanggan",
+    height=450
+)
+
+    st.plotly_chart(
+    fig_importance,
+    use_container_width=True
+)
+    st.info("""
+Feature Importance menunjukkan variabel yang paling berpengaruh
+dalam menentukan segmen pelanggan pada model Random Forest.
+
+Semakin tinggi nilai importance, semakin besar kontribusi variabel
+terhadap hasil prediksi.
+""")
     st.subheader("📈 Performa Model")
 
     col1, col2 = st.columns(2)
